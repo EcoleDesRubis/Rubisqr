@@ -368,4 +368,116 @@ function handleCameraError(error) {
         errorMsg = 'Aucune caméra ne correspond aux contraintes.';
     } else if (error.name === 'SecurityError') {
         errorMsg = 'L\'accès à la caméra est bloqué pour des raisons de sécurité.';
-    } else if (error.name === 'Abort
+    } else if (error.name === 'AbortError') {
+        errorMsg = 'L\'accès à la caméra a été interrompu.';
+    } else {
+        errorMsg = `Erreur: ${error.message || error.name || 'Erreur inconnue'}`;
+    }
+    
+    showError(errorMsg);
+}
+
+// Afficher le message d'erreur
+function showError(message) {
+    errorDetails.textContent = message;
+    errorMessage.classList.add('active');
+    updateStatus('Erreur', '#ef4444');
+    switchCameraBtn.disabled = true;
+    stopScannerBtn.disabled = true;
+    cameraPermissionGranted = false;
+    scanning = false;
+    
+    // Arrêter le flux si nécessaire
+    stopStream();
+    
+    // Cacher le scanner
+    scannerContainer.classList.remove('active');
+}
+
+// Cacher le message d'erreur
+function hideError() {
+    errorMessage.classList.remove('active');
+}
+
+// Afficher l'écran de démarrage
+function showStartScreen() {
+    startScreen.classList.remove('hidden');
+    startScreen.classList.add('active');
+    updateStatus('Prêt à scanner', '#10b981');
+}
+
+// Cacher l'écran de démarrage
+function hideStartScreen() {
+    startScreen.classList.remove('active');
+    startScreen.classList.add('hidden');
+}
+
+// Mettre à jour le statut
+function updateStatus(text, color) {
+    statusText.textContent = text;
+    statusDot.style.backgroundColor = color;
+}
+
+// Jouer le son de scan
+function playScanSound() {
+    try {
+        scanSound.currentTime = 0;
+        scanSound.play().catch(e => console.log('Audio non joué:', e));
+    } catch (error) {
+        console.log('Erreur audio:', error);
+    }
+}
+
+// Vérifier si c'est une URL valide
+function isValidUrl(string) {
+    try {
+        const url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+        return false;
+    }
+}
+
+// Gérer les touches clavier
+function handleKeyPress(e) {
+    // Espace pour basculer la caméra
+    if (e.code === 'Space' && cameraPermissionGranted) {
+        e.preventDefault();
+        switchCamera();
+    }
+    
+    // Échap pour fermer le popup
+    if (e.code === 'Escape' && linkPopup.classList.contains('active')) {
+        closeLinkPopup();
+    }
+    
+    // S pour arrêter le scanner
+    if (e.code === 'KeyS' && cameraPermissionGranted) {
+        e.preventDefault();
+        stopScanner();
+    }
+    
+    // R pour réessayer en cas d'erreur
+    if (e.code === 'KeyR' && errorMessage.classList.contains('active')) {
+        e.preventDefault();
+        hideError();
+        startScanner();
+    }
+}
+
+// Gérer le changement de visibilité
+function handleVisibilityChange() {
+    if (document.hidden) {
+        // Page cachée, arrêter temporairement le scanning
+        if (scanning) {
+            scanning = false;
+        }
+    } else if (cameraPermissionGranted) {
+        // Page visible, redémarrer le scanning
+        scanning = true;
+        if (scanInterval) {
+            clearInterval(scanInterval);
+        }
+        startScanning();
+    }
+}
