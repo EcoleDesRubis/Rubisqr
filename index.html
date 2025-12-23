@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner</title>
+    <meta name="description" content="Free QR Code Scanner - No Ads, No Tracking, Open Source">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-qrcode"></i> QR Code Scanner</h1>
+            <p class="subtitle">Free, Open Source, No Ads • Works on all devices</p>
+        </header>
+
+        <main>
+            <div class="scanner-section">
+                <div class="video-container">
+                    <video id="video" playsinline autoplay></video>
+                    <div class="scan-overlay">
+                        <div class="scan-box"></div>
+                        <div class="scan-line"></div>
+                    </div>
+                    <div class="camera-select">
+                        <select id="camera-select">
+                            <option value="">Select Camera...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button id="start-btn" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Camera
+                    </button>
+                    <button id="stop-btn" class="btn btn-secondary" disabled>
+                        <i class="fas fa-stop"></i> Stop Camera
+                    </button>
+                    <button id="toggle-camera" class="btn btn-secondary" disabled>
+                        <i class="fas fa-sync-alt"></i> Switch Camera
+                    </button>
+                    <button id="flash-toggle" class="btn btn-secondary" disabled>
+                        <i class="fas fa-lightbulb"></i> Flash Off
+                    </button>
+                </div>
+
+                <div class="result-section">
+                    <h3><i class="fas fa-search"></i> Scan Results</h3>
+                    <div class="result-card">
+                        <div class="result-header">
+                            <span class="result-type">URL</span>
+                            <span class="result-time" id="scan-time"></span>
+                        </div>
+                        <div class="result-content">
+                            <p id="result-text">No QR code detected yet. Point your camera at a QR code.</p>
+                            <div class="result-actions" id="result-actions" style="display: none;">
+                                <a id="open-link" class="btn-action" target="_blank">
+                                    <i class="fas fa-external-link-alt"></i> Open Link
+                                </a>
+                                <button id="copy-btn" class="btn-action">
+                                    <i class="fas fa-copy"></i> Copy Text
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="scan-history" id="scan-history">
+                        <h4><i class="fas fa-history"></i> Recent Scans</h4>
+                        <div class="history-list" id="history-list">
+                            <!-- History items will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Privacy First</h3>
+                    <p>No data leaves your device. Everything is processed locally.</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-ad"></i>
+                    <h3>No Ads</h3>
+                    <p>Completely free with zero advertisements or tracking.</p>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-code"></i>
+                    <h3>Open Source</h3>
+                    <p>View and contribute to the source code on GitHub.</p>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h2><i class="fas fa-info-circle"></i> How to Use</h2>
+                <ol>
+                    <li>Click <strong>"Start Camera"</strong> and allow camera access</li>
+                    <li>Point your camera at a QR code</li>
+                    <li>The scanner will automatically detect and decode QR codes</li>
+                    <li>Click detected links to open them</li>
+                </ol>
+            </div>
+        </main>
+
+        <footer>
+            <p>Made with <i class="fas fa-heart" style="color: #e74c3c;"></i> • 
+                <a href="https://github.com/yourusername/qr-scanner" target="_blank">
+                    <i class="fab fa-github"></i> View on GitHub
+                </a>
+            </p>
+            <p class="footer-note">
+                This scanner works entirely in your browser. No data is sent to any server.
+            </p>
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
