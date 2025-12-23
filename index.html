@@ -58,22 +58,35 @@
                 
                 <div class="scan-guide">
                     <i class="fas fa-arrows-alt-h"></i>
-                    <span>Placez le QR code dans le cadre</span>
+                    <span id="guide-text">Démarrage de la caméra...</span>
                 </div>
             </div>
 
             <!-- Contrôles minimaux -->
             <div class="minimal-controls">
-                <button id="switch-camera" class="control-btn">
+                <button id="switch-camera" class="control-btn" disabled>
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
 
             <!-- Status indicator -->
             <div class="status-indicator">
-                <div class="status-dot"></div>
-                <span id="status-text">Prêt</span>
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">Initialisation...</span>
             </div>
+        </div>
+    </div>
+
+    <!-- Message d'erreur -->
+    <div id="error-message" class="error-message">
+        <div class="error-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Erreur d'accès à la caméra</h3>
+            <p id="error-details">Impossible d'accéder à la caméra</p>
+            <button id="retry-btn" class="btn retry-btn">
+                <i class="fas fa-redo"></i>
+                Réessayer
+            </button>
         </div>
     </div>
 
