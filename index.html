@@ -9,98 +9,130 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
-    <!-- Popup pour les liens détectés -->
-    <div id="link-popup" class="link-popup">
+    <!-- Popup de confirmation pour liens -->
+    <div id="link-confirm-popup" class="link-confirm-popup">
         <div class="popup-content">
             <div class="popup-header">
                 <i class="fas fa-external-link-alt"></i>
-                <h3>Lien détecté</h3>
-                <button class="close-popup">&times;</button>
+                <h3>Ouverture du lien</h3>
             </div>
             <div class="popup-body">
-                <p class="popup-url" id="popup-url"></p>
-                <div class="popup-buttons">
-                    <button id="popup-open" class="popup-btn primary">
-                        <i class="fas fa-external-link-alt"></i>
-                        Ouvrir le lien
+                <div class="countdown-display">
+                    <div class="countdown-circle">
+                        <span id="countdown-number">3</span>
+                    </div>
+                    <p class="countdown-text">Ouverture automatique dans...</p>
+                </div>
+                <div class="url-display">
+                    <div class="url-icon">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <div class="url-text">
+                        <p id="confirm-url"></p>
+                        <small>Vérifiez le domaine avant de continuer</small>
+                    </div>
+                </div>
+                <div class="confirm-buttons">
+                    <button id="confirm-open-now" class="confirm-btn primary">
+                        <i class="fas fa-rocket"></i>
+                        Ouvrir maintenant
                     </button>
-                    <button id="popup-copy" class="popup-btn secondary">
-                        <i class="fas fa-copy"></i>
-                        Copier le lien
-                    </button>
-                    <button id="popup-close" class="popup-btn tertiary">
+                    <button id="confirm-cancel" class="confirm-btn secondary">
                         <i class="fas fa-times"></i>
-                        Continuer à scanner
+                        Annuler
                     </button>
                 </div>
-                <div class="popup-security">
+                <div class="security-note">
                     <i class="fas fa-shield-alt"></i>
-                    <span>Vérifiez toujours l'URL avant de l'ouvrir</span>
+                    <p>Assurez-vous que vous faites confiance à cette source avant d'ouvrir le lien</p>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="app-container">
-        <!-- Header avec gradient -->
+        <!-- Header -->
         <header class="app-header">
             <div class="header-content">
                 <div class="logo">
                     <div class="logo-icon">
                         <i class="fas fa-qrcode"></i>
+                        <div class="scan-indicator" id="scan-indicator"></div>
                     </div>
                     <div class="logo-text">
                         <h1>Scanner QR</h1>
-                        <p class="tagline">Scannez instantanément</p>
+                        <p class="tagline">Ouverture automatique des liens</p>
                     </div>
                 </div>
-                <div class="status-indicator">
-                    <div class="status-dot" id="status-dot"></div>
-                    <span id="status-text">Prêt</span>
+                <div class="header-stats">
+                    <div class="stat">
+                        <i class="fas fa-bolt"></i>
+                        <span>Auto-ouverture</span>
+                    </div>
+                    <div class="stat">
+                        <i class="fas fa-link"></i>
+                        <span id="links-count">0 liens</span>
+                    </div>
                 </div>
             </div>
         </header>
 
         <!-- Section principale -->
         <main class="main-content">
-            <!-- Scanner -->
+            <!-- Scanner section -->
             <section class="scanner-section">
-                <div class="scanner-card">
-                    <div class="scanner-visual">
+                <div class="scanner-main">
+                    <!-- Scanner area -->
+                    <div class="scanner-area">
                         <div class="scanner-frame">
-                            <div class="frame-border">
+                            <div class="scan-grid">
+                                <div class="grid-line horizontal"></div>
+                                <div class="grid-line vertical"></div>
+                            </div>
+                            <video id="video" playsinline autoplay></video>
+                            <div class="scan-animation">
+                                <div class="laser-line"></div>
+                                <div class="pulse-ring"></div>
+                            </div>
+                            <div class="frame-corners">
                                 <div class="corner top-left"></div>
                                 <div class="corner top-right"></div>
                                 <div class="corner bottom-left"></div>
                                 <div class="corner bottom-right"></div>
                             </div>
-                            
-                            <div class="video-container">
-                                <video id="video" playsinline autoplay></video>
-                                <div class="scanning-line"></div>
-                                <div class="scan-guide">
-                                    <div class="guide-text">
-                                        <i class="fas fa-arrows-alt-h"></i>
-                                        <span>Placez le QR code dans le cadre</span>
-                                    </div>
-                                </div>
+                        </div>
+                        
+                        <div class="scanner-info">
+                            <div class="info-item active">
+                                <i class="fas fa-camera"></i>
+                                <span>Caméra active</span>
+                            </div>
+                            <div class="info-item auto-open">
+                                <i class="fas fa-bolt"></i>
+                                <span>Auto-ouverture: <strong id="auto-open-status">Activée</strong></span>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="scanner-controls">
-                            <div class="camera-selector">
+                    <!-- Controls -->
+                    <div class="controls-panel">
+                        <div class="camera-controls">
+                            <div class="control-group">
+                                <label for="camera-select">
+                                    <i class="fas fa-video"></i>
+                                    Sélection de la caméra
+                                </label>
                                 <select id="camera-select" class="camera-select">
-                                    <option value="">Sélectionner une caméra</option>
+                                    <option value="">Choisir une caméra...</option>
                                 </select>
-                                <i class="fas fa-camera"></i>
                             </div>
                             
                             <div class="control-buttons">
-                                <button id="start-btn" class="control-btn start-btn">
+                                <button id="start-btn" class="control-btn start-btn pulse">
                                     <span class="btn-icon">
                                         <i class="fas fa-play"></i>
                                     </span>
-                                    <span class="btn-text">Démarrer la caméra</span>
+                                    <span class="btn-text">Démarrer le scan</span>
                                 </button>
                                 
                                 <button id="stop-btn" class="control-btn stop-btn" disabled>
@@ -110,36 +142,75 @@
                                     <span class="btn-text">Arrêter</span>
                                 </button>
                                 
-                                <div class="icon-buttons">
-                                    <button id="toggle-camera" class="icon-btn" disabled title="Changer de caméra">
+                                <div class="quick-controls">
+                                    <button id="toggle-camera" class="quick-btn" disabled title="Changer de caméra">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
-                                    <button id="flash-toggle" class="icon-btn" disabled title="Flash">
+                                    <button id="flash-toggle" class="quick-btn" disabled title="Activer le flash">
                                         <i class="fas fa-lightbulb"></i>
+                                    </button>
+                                    <button id="toggle-auto-open" class="quick-btn active" title="Auto-ouverture">
+                                        <i class="fas fa-bolt"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Résultats en temps réel -->
-                    <div class="results-panel">
-                        <div class="panel-header">
-                            <h3><i class="fas fa-search"></i> Dernier scan</h3>
-                            <div class="scan-info">
-                                <span class="time" id="scan-time">--:--</span>
-                                <span class="type" id="scan-type">En attente</span>
+                        <!-- Auto-open settings -->
+                        <div class="auto-open-settings">
+                            <div class="settings-header">
+                                <i class="fas fa-cog"></i>
+                                <h4>Paramètres d'ouverture automatique</h4>
+                            </div>
+                            <div class="settings-options">
+                                <div class="option">
+                                    <input type="range" id="open-delay" min="1" max="5" value="3" class="slider">
+                                    <label for="open-delay">
+                                        <i class="fas fa-clock"></i>
+                                        Délai: <span id="delay-value">3</span> secondes
+                                    </label>
+                                </div>
+                                <div class="option">
+                                    <input type="checkbox" id="sound-toggle" checked class="toggle">
+                                    <label for="sound-toggle">
+                                        <i class="fas fa-volume-up"></i>
+                                        Son de confirmation
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                        
+                    </div>
+                </div>
+
+                <!-- Results display -->
+                <div class="results-display">
+                    <div class="results-header">
+                        <h3><i class="fas fa-history"></i> Activité récente</h3>
+                        <div class="scan-counter">
+                            <span id="scan-counter">0 scans</span>
+                            <span class="divider">•</span>
+                            <span id="link-counter">0 liens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="results-list" id="results-list">
+                        <div class="empty-results">
+                            <i class="fas fa-qrcode"></i>
+                            <p>Scannez votre premier QR code</p>
+                            <small>Les liens s'ouvriront automatiquement</small>
+                        </div>
+                    </div>
+                    
+                    <div class="current-result">
+                        <div class="result-header">
+                            <h4><i class="fas fa-search"></i> Dernier scan</h4>
+                            <span class="result-time" id="current-time">--:--</span>
+                        </div>
                         <div class="result-content">
-                            <div class="result-text" id="result-text">
-                                <i class="fas fa-qrcode waiting-icon"></i>
-                                <p>En attente de scan...</p>
-                            </div>
-                            
-                            <div class="result-actions" id="result-actions">
-                                <!-- Actions seront ajoutées dynamiquement -->
+                            <p id="current-result" class="result-text">En attente...</p>
+                            <div class="result-status">
+                                <i class="fas fa-clock status-icon"></i>
+                                <span id="result-status">Prêt pour le scan</span>
                             </div>
                         </div>
                     </div>
@@ -147,50 +218,36 @@
             </section>
 
             <!-- Instructions -->
-            <section class="instructions-section">
+            <section class="instructions">
                 <div class="instructions-card">
-                    <h2><i class="fas fa-graduation-cap"></i> Comment utiliser</h2>
-                    <div class="instructions-steps">
+                    <h2><i class="fas fa-graduation-cap"></i> Comment ça marche</h2>
+                    <div class="steps">
                         <div class="step">
-                            <div class="step-number">1</div>
+                            <div class="step-icon">
+                                <i class="fas fa-camera"></i>
+                            </div>
                             <div class="step-content">
-                                <h4>Démarrer la caméra</h4>
-                                <p>Cliquez sur "Démarrer la caméra" et autorisez l'accès à votre caméra.</p>
+                                <h4>1. Démarrer la caméra</h4>
+                                <p>Cliquez sur "Démarrer le scan" et autorisez l'accès à votre caméra.</p>
                             </div>
                         </div>
                         <div class="step">
-                            <div class="step-number">2</div>
+                            <div class="step-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
                             <div class="step-content">
-                                <h4>Scanner le code</h4>
-                                <p>Placez le QR code dans le cadre de scan. La détection est automatique.</p>
+                                <h4>2. Scanner le QR code</h4>
+                                <p>Placez le QR code dans le cadre. La détection est instantanée.</p>
                             </div>
                         </div>
                         <div class="step">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <h4>Ouvrir le lien</h4>
-                                <p>Si un lien est détecté, un popup s'ouvrira pour l'ouvrir ou le copier.</p>
+                            <div class="step-icon">
+                                <i class="fas fa-external-link-alt"></i>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Historique -->
-            <section class="history-section">
-                <div class="history-card">
-                    <div class="history-header">
-                        <h3><i class="fas fa-history"></i> Historique des scans</h3>
-                        <button id="clear-history" class="clear-btn">
-                            <i class="fas fa-trash"></i>
-                            Effacer
-                        </button>
-                    </div>
-                    <div class="history-list" id="history-list">
-                        <!-- Les scans seront ajoutés ici -->
-                        <div class="empty-history">
-                            <i class="fas fa-clock"></i>
-                            <p>Aucun scan récent</p>
+                            <div class="step-content">
+                                <h4>3. Ouverture automatique</h4>
+                                <p>Les liens s'ouvrent automatiquement après un court décompte.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -199,18 +256,29 @@
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>Scanner QR Code • Développé avec <i class="fas fa-heart"></i></p>
-            <p class="footer-note">Tous les scans sont traités localement sur votre appareil</p>
+            <div class="footer-content">
+                <p>Scanner QR avec ouverture automatique • <i class="fas fa-bolt"></i> Rapide & Pratique</p>
+                <div class="footer-links">
+                    <button id="sound-test" class="footer-link">
+                        <i class="fas fa-volume-up"></i>
+                        Test son
+                    </button>
+                    <button id="clear-all" class="footer-link">
+                        <i class="fas fa-trash"></i>
+                        Effacer tout
+                    </button>
+                </div>
+            </div>
         </footer>
     </div>
 
-    <!-- Notification Toast -->
-    <div id="toast" class="toast">
-        <div class="toast-content">
-            <i class="toast-icon"></i>
-            <span class="toast-message"></span>
-        </div>
-    </div>
+    <!-- Notification sonore -->
+    <audio id="scan-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="link-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" type="audio/mpeg">
+    </audio>
 
     <script src="script.js"></script>
 </body>
