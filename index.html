@@ -40,11 +40,38 @@
         </div>
     </div>
 
+    <!-- Écran de démarrage -->
+    <div id="start-screen" class="start-screen active">
+        <div class="start-content">
+            <div class="start-icon">
+                <i class="fas fa-qrcode"></i>
+            </div>
+            <h1>Scanner QR</h1>
+            <p class="start-description">
+                Scannez des codes QR et ouvrez automatiquement les liens
+            </p>
+            <button id="start-scanner" class="start-btn">
+                <i class="fas fa-camera"></i>
+                Démarrer le scanner
+            </button>
+            <div class="start-features">
+                <div class="feature">
+                    <i class="fas fa-bolt"></i>
+                    <span>Ouverture automatique</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Switch caméra</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scanner principal -->
     <div class="scanner-container">
         <!-- Scanner area -->
         <div class="scanner-area">
-            <video id="video" playsinline autoplay></video>
+            <video id="video" playsinline></video>
             
             <div class="scan-overlay">
                 <div class="scan-frame">
@@ -58,21 +85,24 @@
                 
                 <div class="scan-guide">
                     <i class="fas fa-arrows-alt-h"></i>
-                    <span id="guide-text">Démarrage de la caméra...</span>
+                    <span id="guide-text">Prêt à scanner</span>
                 </div>
             </div>
 
-            <!-- Contrôles minimaux -->
-            <div class="minimal-controls">
-                <button id="switch-camera" class="control-btn" disabled>
+            <!-- Contrôles -->
+            <div class="controls">
+                <button id="switch-camera" class="control-btn" title="Changer de caméra">
                     <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="stop-scanner" class="control-btn stop-btn" title="Arrêter le scanner">
+                    <i class="fas fa-stop"></i>
                 </button>
             </div>
 
             <!-- Status indicator -->
             <div class="status-indicator">
                 <div class="status-dot" id="status-dot"></div>
-                <span id="status-text">Initialisation...</span>
+                <span id="status-text">Prêt</span>
             </div>
         </div>
     </div>
@@ -86,6 +116,10 @@
             <button id="retry-btn" class="btn retry-btn">
                 <i class="fas fa-redo"></i>
                 Réessayer
+            </button>
+            <button id="back-to-start" class="btn back-btn">
+                <i class="fas fa-home"></i>
+                Retour à l'accueil
             </button>
         </div>
     </div>
