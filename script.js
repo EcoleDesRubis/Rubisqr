@@ -2,7 +2,8 @@
 const video = document.getElementById('video');
 const switchCameraBtn = document.getElementById('switch-camera');
 const statusText = document.getElementById('status-text');
-const statusDot = document.querySelector('.status-dot');
+const statusDot = document.getElementById('status-dot');
+const guideText = document.getElementById('guide-text');
 
 // Éléments du popup
 const linkPopup = document.getElementById('link-popup');
@@ -12,62 +13,128 @@ const countdownSeconds = document.getElementById('countdown-seconds');
 const openNowBtn = document.getElementById('open-now');
 const cancelBtn = document.getElementById('cancel-open');
 
+// Message d'erreur
+const errorMessage = document.getElementById('error-message');
+const errorDetails = document.getElementById('error-details');
+const retryBtn = document.getElementById('retry-btn');
+
 // Audio
 const scanSound = document.getElementById('scan-sound');
 
 // Variables globales
 let stream = null;
-let cameras = [];
-let currentCameraIndex = 0;
 let scanning = false;
 let scanInterval = null;
 let countdownInterval = null;
 let currentCountdown = 3;
 let pendingLink = null;
+let isFrontCamera = false;
+let cameraPermissionGranted = false;
 
 // Initialisation automatique au chargement
-window.addEventListener('DOMContentLoaded', async () => {
-    await initCamera();
-    updateStatus('Scan en cours...', '#3b82f6');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM chargé, démarrage de la caméra...');
+    initializeCamera();
 });
 
 // Initialisation de la caméra
-async function initCamera() {
+async function initializeCamera() {
     try {
-        // Démarrer automatiquement avec la caméra arrière
-        await startCamera('environment');
-        startScanning();
+        updateStatus('Démarrage de la caméra...', '#f59e0b');
+        guideText.textContent = 'Démarrage de la caméra...';
+        
+        // Vérifier si l'API getUserMedia est disponible
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showError('Votre navigateur ne supporte pas l\'accès à la caméra');
+            return;
+        }
+        
+        // Demander la permission d'accès à la caméra
+        await startCamera();
+        
     } catch (error) {
         console.error('Erreur d\'initialisation:', error);
-        updateStatus('Erreur de caméra', '#ef4444');
+        handleCameraError(error);
     }
 }
 
 // Démarrer la caméra
-async function startCamera(facingMode = 'environment') {
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-
-    const constraints = {
-        video: {
-            facingMode: facingMode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+async function startCamera() {
+    try {
+        // Arrêter le flux précédent s'il existe
+        if (stream) {
+            stopStream();
         }
-    };
+        
+        // Constraintes pour la caméra
+        const constraints = {
+            video: {
+                facingMode: isFrontCamera ? 'user' : 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+            },
+            audio: false
+        };
+        
+        console.log('Demande d\'accès à la caméra avec constraints:', constraints);
+        
+        // Demander l'accès à la caméra
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('Accès à la caméra accordé');
+        
+        // Attacher le flux à la vidéo
+        video.srcObject = stream;
+        
+        // Attendre que la vidéo soit prête
+        video.onloadedmetadata = () => {
+            console.log('Métadonnées de la vidéo chargées');
+            video.play().then(() => {
+                console.log('Vidéo en lecture');
+                cameraPermissionGranted = true;
+                scanning = true;
+                switchCameraBtn.disabled = false;
+                updateStatus('Scan en cours...', '#3b82f6');
+                guideText.textContent = 'Placez le QR code dans le cadre';
+                startScanning();
+            }).catch(err => {
+                console.error('Erreur de lecture vidéo:', err);
+                showError('Erreur de lecture vidéo: ' + err.message);
+            });
+        };
+        
+        video.onerror = (err) => {
+            console.error('Erreur vidéo:', err);
+            showError('Erreur vidéo');
+        };
+        
+    } catch (error) {
+        console.error('Erreur d\'accès à la caméra:', error);
+        throw error;
+    }
+}
 
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = stream;
-    scanning = true;
+// Arrêter le flux vidéo
+function stopStream() {
+    if (stream) {
+        stream.getTracks().forEach(track => {
+            track.stop();
+        });
+        stream = null;
+    }
+    scanning = false;
+    if (scanInterval) {
+        clearInterval(scanInterval);
+        scanInterval = null;
+    }
 }
 
 // Commencer le scanning
 function startScanning() {
     if (scanInterval) clearInterval(scanInterval);
     
-    scanInterval = setInterval(async () => {
-        if (!scanning || !video.videoWidth) return;
+    scanInterval = setInterval(() => {
+        if (!scanning || !video.videoWidth || !cameraPermissionGranted) return;
         
         try {
             const canvas = document.createElement('canvas');
@@ -75,7 +142,10 @@ function startScanning() {
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             
+            // Dessiner l'image de la vidéo sur le canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Récupérer les données d'image
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             
             // Décoder le QR code
@@ -83,19 +153,22 @@ function startScanning() {
                 inversionAttempts: "dontInvert",
             });
             
-            if (code) {
+            if (code && code.data) {
+                console.log('QR code détecté:', code.data.substring(0, 50) + '...');
                 handleQRCodeDetected(code.data);
             }
             
         } catch (error) {
-            console.error('Erreur de scan:', error);
+            console.error('Erreur lors du scan:', error);
         }
-    }, 300); // Scan toutes les 300ms
+    }, 500); // Scan toutes les 500ms
 }
 
 // Gérer le QR code détecté
 function handleQRCodeDetected(data) {
     if (!data) return;
+    
+    console.log('QR code traité:', data);
     
     // Jouer le son de scan
     playScanSound();
@@ -106,18 +179,18 @@ function handleQRCodeDetected(data) {
     // Vérifier si c'est une URL
     if (isValidUrl(data)) {
         handleLinkDetected(data);
-    }
-    
-    // Revenir au scanning après 1 seconde
-    setTimeout(() => {
-        if (!linkPopup.classList.contains('active')) {
+    } else {
+        // Si ce n'est pas une URL, afficher un message
+        updateStatus('Texte détecté', '#8b5cf6');
+        setTimeout(() => {
             updateStatus('Scan en cours...', '#3b82f6');
-        }
-    }, 1000);
+        }, 1500);
+    }
 }
 
 // Gérer un lien détecté
 function handleLinkDetected(url) {
+    console.log('Lien détecté:', url);
     pendingLink = url;
     showLinkPopup(url);
 }
@@ -154,13 +227,16 @@ function startCountdown() {
 
 // Ouvrir le lien
 function openLink(url) {
+    console.log('Ouverture du lien:', url);
     window.open(url, '_blank', 'noopener,noreferrer');
     closeLinkPopup();
     updateStatus('Lien ouvert!', '#10b981');
     
     // Revenir au scanning après 2 secondes
     setTimeout(() => {
-        updateStatus('Scan en cours...', '#3b82f6');
+        if (!linkPopup.classList.contains('active')) {
+            updateStatus('Scan en cours...', '#3b82f6');
+        }
     }, 2000);
 }
 
@@ -176,17 +252,54 @@ function closeLinkPopup() {
 // Basculer entre caméra avant/arrière
 async function switchCamera() {
     try {
-        currentCameraIndex = (currentCameraIndex + 1) % 2;
-        const facingMode = currentCameraIndex === 0 ? 'environment' : 'user';
-        
+        isFrontCamera = !isFrontCamera;
         updateStatus('Changement de caméra...', '#f59e0b');
-        await startCamera(facingMode);
+        
+        await startCamera();
         updateStatus('Scan en cours...', '#3b82f6');
         
     } catch (error) {
         console.error('Erreur de changement de caméra:', error);
-        updateStatus('Erreur de caméra', '#ef4444');
+        handleCameraError(error);
     }
+}
+
+// Gérer les erreurs de caméra
+function handleCameraError(error) {
+    let errorMsg = 'Erreur d\'accès à la caméra';
+    
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMsg = 'Permission de la caméra refusée. Veuillez autoriser l\'accès à la caméra.';
+    } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMsg = 'Aucune caméra trouvée sur cet appareil.';
+    } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMsg = 'La caméra est déjà utilisée par une autre application.';
+    } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+        errorMsg = 'Aucune caméra ne correspond aux contraintes.';
+    } else if (error.name === 'SecurityError') {
+        errorMsg = 'L\'accès à la caméra est bloqué pour des raisons de sécurité.';
+    } else if (error.name === 'AbortError') {
+        errorMsg = 'L\'accès à la caméra a été interrompu.';
+    } else {
+        errorMsg = `Erreur: ${error.message || error.name || 'Erreur inconnue'}`;
+    }
+    
+    showError(errorMsg);
+}
+
+// Afficher le message d'erreur
+function showError(message) {
+    errorDetails.textContent = message;
+    errorMessage.classList.add('active');
+    updateStatus('Erreur', '#ef4444');
+    switchCameraBtn.disabled = true;
+    cameraPermissionGranted = false;
+    scanning = false;
+}
+
+// Cacher le message d'erreur
+function hideError() {
+    errorMessage.classList.remove('active');
 }
 
 // Mettre à jour le statut
@@ -199,7 +312,7 @@ function updateStatus(text, color) {
 function playScanSound() {
     try {
         scanSound.currentTime = 0;
-        scanSound.play().catch(e => console.log('Audio non joué'));
+        scanSound.play().catch(e => console.log('Audio non joué:', e));
     } catch (error) {
         console.log('Erreur audio:', error);
     }
@@ -223,11 +336,15 @@ openNowBtn.addEventListener('click', () => {
     }
 });
 cancelBtn.addEventListener('click', closeLinkPopup);
+retryBtn.addEventListener('click', () => {
+    hideError();
+    initializeCamera();
+});
 
 // Événements clavier
 document.addEventListener('keydown', (e) => {
     // Espace pour basculer la caméra
-    if (e.code === 'Space') {
+    if (e.code === 'Space' && cameraPermissionGranted) {
         e.preventDefault();
         switchCamera();
     }
@@ -236,4 +353,24 @@ document.addEventListener('keydown', (e) => {
     if (e.code === 'Escape' && linkPopup.classList.contains('active')) {
         closeLinkPopup();
     }
+    
+    // R pour réessayer en cas d'erreur
+    if (e.code === 'KeyR' && errorMessage.classList.contains('active')) {
+        e.preventDefault();
+        hideError();
+        initializeCamera();
+    }
 });
+
+// Gérer le changement de visibilité de la page
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Page cachée, arrêter le scanning
+        scanning = false;
+    } else if (cameraPermissionGranted) {
+        // Page visible, redémarrer le scanning
+        scanning = true;
+        startScanning();
+    }
+});
+
