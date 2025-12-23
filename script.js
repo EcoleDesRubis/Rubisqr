@@ -1,9 +1,15 @@
 // Éléments DOM
 const video = document.getElementById('video');
 const switchCameraBtn = document.getElementById('switch-camera');
+const stopScannerBtn = document.getElementById('stop-scanner');
 const statusText = document.getElementById('status-text');
 const statusDot = document.getElementById('status-dot');
 const guideText = document.getElementById('guide-text');
+
+// Écrans
+const startScreen = document.getElementById('start-screen');
+const scannerContainer = document.querySelector('.scanner-container');
+const startScannerBtn = document.getElementById('start-scanner');
 
 // Éléments du popup
 const linkPopup = document.getElementById('link-popup');
@@ -17,6 +23,7 @@ const cancelBtn = document.getElementById('cancel-open');
 const errorMessage = document.getElementById('error-message');
 const errorDetails = document.getElementById('error-details');
 const retryBtn = document.getElementById('retry-btn');
+const backToStartBtn = document.getElementById('back-to-start');
 
 // Audio
 const scanSound = document.getElementById('scan-sound');
@@ -31,29 +38,77 @@ let pendingLink = null;
 let isFrontCamera = false;
 let cameraPermissionGranted = false;
 
-// Initialisation automatique au chargement
+// Initialisation
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM chargé, démarrage de la caméra...');
-    initializeCamera();
+    console.log('Application prête');
+    updateStatus('Prêt à scanner', '#10b981');
+    
+    // Configuration initiale
+    setupEventListeners();
 });
 
-// Initialisation de la caméra
-async function initializeCamera() {
+// Configurer les événements
+function setupEventListeners() {
+    // Bouton de démarrage
+    startScannerBtn.addEventListener('click', startScanner);
+    
+    // Bouton d'arrêt
+    stopScannerBtn.addEventListener('click', stopScanner);
+    
+    // Bouton switch caméra
+    switchCameraBtn.addEventListener('click', switchCamera);
+    
+    // Boutons popup
+    openNowBtn.addEventListener('click', () => {
+        if (pendingLink) {
+            openLink(pendingLink);
+        }
+    });
+    
+    cancelBtn.addEventListener('click', closeLinkPopup);
+    
+    // Boutons d'erreur
+    retryBtn.addEventListener('click', () => {
+        hideError();
+        startScanner();
+    });
+    
+    backToStartBtn.addEventListener('click', () => {
+        hideError();
+        showStartScreen();
+    });
+    
+    // Événements clavier
+    document.addEventListener('keydown', handleKeyPress);
+    
+    // Gérer le changement de visibilité
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+}
+
+// Démarrer le scanner
+async function startScanner() {
     try {
+        // Cacher l'écran de démarrage
+        hideStartScreen();
+        
+        // Montrer le scanner
+        scannerContainer.classList.add('active');
+        
+        // Mettre à jour le statut
         updateStatus('Démarrage de la caméra...', '#f59e0b');
         guideText.textContent = 'Démarrage de la caméra...';
         
-        // Vérifier si l'API getUserMedia est disponible
+        // Vérifier si l'API est disponible
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             showError('Votre navigateur ne supporte pas l\'accès à la caméra');
             return;
         }
         
-        // Demander la permission d'accès à la caméra
+        // Démarrer la caméra
         await startCamera();
         
     } catch (error) {
-        console.error('Erreur d\'initialisation:', error);
+        console.error('Erreur de démarrage du scanner:', error);
         handleCameraError(error);
     }
 }
@@ -77,7 +132,7 @@ async function startCamera() {
             audio: false
         };
         
-        console.log('Demande d\'accès à la caméra avec constraints:', constraints);
+        console.log('Demande d\'accès à la caméra...');
         
         // Demander l'accès à la caméra
         stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -94,6 +149,7 @@ async function startCamera() {
                 cameraPermissionGranted = true;
                 scanning = true;
                 switchCameraBtn.disabled = false;
+                stopScannerBtn.disabled = false;
                 updateStatus('Scan en cours...', '#3b82f6');
                 guideText.textContent = 'Placez le QR code dans le cadre';
                 startScanning();
@@ -114,6 +170,28 @@ async function startCamera() {
     }
 }
 
+// Arrêter le scanner
+function stopScanner() {
+    // Arrêter le flux vidéo
+    stopStream();
+    
+    // Mettre à jour le statut
+    updateStatus('Scanner arrêté', '#6b7280');
+    guideText.textContent = 'Scanner arrêté';
+    
+    // Désactiver les boutons
+    switchCameraBtn.disabled = true;
+    stopScannerBtn.disabled = true;
+    
+    // Cacher le scanner
+    scannerContainer.classList.remove('active');
+    
+    // Remonter l'écran de démarrage
+    showStartScreen();
+    
+    console.log('Scanner arrêté');
+}
+
 // Arrêter le flux vidéo
 function stopStream() {
     if (stream) {
@@ -123,9 +201,17 @@ function stopStream() {
         stream = null;
     }
     scanning = false;
+    cameraPermissionGranted = false;
     if (scanInterval) {
         clearInterval(scanInterval);
         scanInterval = null;
+    }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    if (linkPopup.classList.contains('active')) {
+        closeLinkPopup();
     }
 }
 
@@ -183,7 +269,9 @@ function handleQRCodeDetected(data) {
         // Si ce n'est pas une URL, afficher un message
         updateStatus('Texte détecté', '#8b5cf6');
         setTimeout(() => {
-            updateStatus('Scan en cours...', '#3b82f6');
+            if (scanning) {
+                updateStatus('Scan en cours...', '#3b82f6');
+            }
         }, 1500);
     }
 }
@@ -234,7 +322,7 @@ function openLink(url) {
     
     // Revenir au scanning après 2 secondes
     setTimeout(() => {
-        if (!linkPopup.classList.contains('active')) {
+        if (scanning && !linkPopup.classList.contains('active')) {
             updateStatus('Scan en cours...', '#3b82f6');
         }
     }, 2000);
@@ -254,9 +342,11 @@ async function switchCamera() {
     try {
         isFrontCamera = !isFrontCamera;
         updateStatus('Changement de caméra...', '#f59e0b');
+        guideText.textContent = 'Changement de caméra...';
         
         await startCamera();
         updateStatus('Scan en cours...', '#3b82f6');
+        guideText.textContent = 'Placez le QR code dans le cadre';
         
     } catch (error) {
         console.error('Erreur de changement de caméra:', error);
@@ -278,99 +368,4 @@ function handleCameraError(error) {
         errorMsg = 'Aucune caméra ne correspond aux contraintes.';
     } else if (error.name === 'SecurityError') {
         errorMsg = 'L\'accès à la caméra est bloqué pour des raisons de sécurité.';
-    } else if (error.name === 'AbortError') {
-        errorMsg = 'L\'accès à la caméra a été interrompu.';
-    } else {
-        errorMsg = `Erreur: ${error.message || error.name || 'Erreur inconnue'}`;
-    }
-    
-    showError(errorMsg);
-}
-
-// Afficher le message d'erreur
-function showError(message) {
-    errorDetails.textContent = message;
-    errorMessage.classList.add('active');
-    updateStatus('Erreur', '#ef4444');
-    switchCameraBtn.disabled = true;
-    cameraPermissionGranted = false;
-    scanning = false;
-}
-
-// Cacher le message d'erreur
-function hideError() {
-    errorMessage.classList.remove('active');
-}
-
-// Mettre à jour le statut
-function updateStatus(text, color) {
-    statusText.textContent = text;
-    statusDot.style.backgroundColor = color;
-}
-
-// Jouer le son de scan
-function playScanSound() {
-    try {
-        scanSound.currentTime = 0;
-        scanSound.play().catch(e => console.log('Audio non joué:', e));
-    } catch (error) {
-        console.log('Erreur audio:', error);
-    }
-}
-
-// Vérifier si c'est une URL valide
-function isValidUrl(string) {
-    try {
-        const url = new URL(string);
-        return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch (_) {
-        return false;
-    }
-}
-
-// Événements
-switchCameraBtn.addEventListener('click', switchCamera);
-openNowBtn.addEventListener('click', () => {
-    if (pendingLink) {
-        openLink(pendingLink);
-    }
-});
-cancelBtn.addEventListener('click', closeLinkPopup);
-retryBtn.addEventListener('click', () => {
-    hideError();
-    initializeCamera();
-});
-
-// Événements clavier
-document.addEventListener('keydown', (e) => {
-    // Espace pour basculer la caméra
-    if (e.code === 'Space' && cameraPermissionGranted) {
-        e.preventDefault();
-        switchCamera();
-    }
-    
-    // Échap pour fermer le popup
-    if (e.code === 'Escape' && linkPopup.classList.contains('active')) {
-        closeLinkPopup();
-    }
-    
-    // R pour réessayer en cas d'erreur
-    if (e.code === 'KeyR' && errorMessage.classList.contains('active')) {
-        e.preventDefault();
-        hideError();
-        initializeCamera();
-    }
-});
-
-// Gérer le changement de visibilité de la page
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        // Page cachée, arrêter le scanning
-        scanning = false;
-    } else if (cameraPermissionGranted) {
-        // Page visible, redémarrer le scanning
-        scanning = true;
-        startScanning();
-    }
-});
-
+    } else if (error.name === 'Abort
